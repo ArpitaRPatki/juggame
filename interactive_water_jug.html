@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Water Jug Puzzle </title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background: #f0f0f0;
+    }
+    h1 {
+      color: #333;
+    }
+    .container {
+      margin-top: 20px;
+    }
+    #controls button {
+      margin: 5px;
+      padding: 10px 15px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    .jugs {
+      display: flex;
+      justify-content: center;
+      margin-top: 30px;
+    }
+    .jug {
+      width: 100px;
+      height: 200px;
+      border: 2px solid #333;
+      margin: 0 20px;
+      position: relative;
+      border-radius: 10px;
+      overflow: hidden;
+      background: #e0e0e0;
+    }
+    .water {
+      position: absolute;
+      bottom: 0;
+      width: 100%;
+      background: #00bfff;
+      transition: height 0.3s;
+    }
+    .jug-label {
+      margin-top: 10px;
+      font-weight: bold;
+    }
+    #solution {
+      margin-top: 30px;
+      background: #fff;
+      padding: 15px;
+      border-radius: 10px;
+      width: 80%;
+      margin-left: auto;
+      margin-right: auto;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+  </style>
+</head>
+<body>
+  <h1> Water Jug Puzzle</h1>
+  <p>Jugs: A = 5L, B = 3L | Goal: 4L</p>
+
+  <div class="jugs">
+    <div>
+      <div class="jug" id="jugA">
+        <div class="water" id="waterA" style="height: 0%"></div>
+      </div>
+      <div class="jug-label">Jug A</div>
+    </div>
+    <div>
+      <div class="jug" id="jugB">
+        <div class="water" id="waterB" style="height: 0%"></div>
+      </div>
+      <div class="jug-label">Jug B</div>
+    </div>
+  </div>
+
+  <div id="controls" class="container">
+    <button onclick="fillA()">Fill Jug A</button>
+    <button onclick="fillB()">Fill Jug B</button>
+    <button onclick="emptyA()">Empty Jug A</button>
+    <button onclick="emptyB()">Empty Jug B</button>
+    <button onclick="pourAtoB()">Pour A → B</button>
+    <button onclick="pourBtoA()">Pour B → A</button>
+    <button onclick="checkWin()">Check Goal</button>
+    <button onclick="solve()">Show Solution</button>
+  </div>
+
+  <div id="solution"></div>
+
+  <script>
+    const capA = 5;
+    const capB = 3;
+    const target = 4;
+    let jugA = 0;
+    let jugB = 0;
+
+    function updateVisuals() {
+      document.getElementById("waterA").style.height = (jugA / capA) * 100 + "%";
+      document.getElementById("waterB").style.height = (jugB / capB) * 100 + "%";
+    }
+
+    function fillA() { jugA = capA; updateVisuals(); }
+    function fillB() { jugB = capB; updateVisuals(); }
+    function emptyA() { jugA = 0; updateVisuals(); }
+    function emptyB() { jugB = 0; updateVisuals(); }
+    function pourAtoB() {
+      let transfer = Math.min(jugA, capB - jugB);
+      jugA -= transfer;
+      jugB += transfer;
+      updateVisuals();
+    }
+    function pourBtoA() {
+      let transfer = Math.min(jugB, capA - jugA);
+      jugB -= transfer;
+      jugA += transfer;
+      updateVisuals();
+    }
+    function checkWin() {
+      const sol = document.getElementById("solution");
+      if (jugA === target || jugB === target) {
+        sol.innerHTML = `<p><strong> Goal Achieved: (${jugA}, ${jugB})</strong></p>`;
+      } else {
+        sol.innerHTML = `<p> Keep trying! Current: (${jugA}, ${jugB})</p>`;
+      }
+    }
+
+    function waterJugSolver(capA, capB, target) {
+      let visited = new Set();
+      let queue = [];
+
+      queue.push({ a: 0, b: 0, path: [], states: [{a: 0, b: 0}] });
+
+      while (queue.length > 0) {
+        let state = queue.shift();
+        let key = `${state.a},${state.b}`;
+
+        if (visited.has(key)) continue;
+        visited.add(key);
+
+        if (state.a === target || state.b === target) {
+          animateSteps(state.path, state.states);
+          return;
+        }
+
+        let a = state.a, b = state.b;
+        let path = state.path;
+        let states = state.states;
+
+        let nextStates = [
+          { a: capA, b: b, move: "Fill Jug A" },
+          { a: a, b: capB, move: "Fill Jug B" },
+          { a: 0, b: b, move: "Empty Jug A" },
+          { a: a, b: 0, move: "Empty Jug B" },
+          {
+            a: a - Math.min(a, capB - b),
+            b: b + Math.min(a, capB - b),
+            move: "Pour A → B"
+          },
+          {
+            a: a + Math.min(b, capA - a),
+            b: b - Math.min(b, capA - a),
+            move: "Pour B → A"
+          }
+        ];
+
+        for (let next of nextStates) {
+          let newKey = `${next.a},${next.b}`;
+          if (!visited.has(newKey)) {
+            queue.push({
+              a: next.a,
+              b: next.b,
+              path: [...path, `${next.move} → (${next.a}, ${next.b})`],
+              states: [...states, {a: next.a, b: next.b}]
+            });
+          }
+        }
+      }
+
+      document.getElementById("solution").innerHTML = "<p>No solution found.</p>";
+    }
+
+    function solve() {
+      document.getElementById("solution").innerHTML = "<p>Solving...</p>";
+      setTimeout(() => waterJugSolver(capA, capB, target), 100);
+    }
+
+    function animateSteps(steps, states) {
+      const div = document.getElementById("solution");
+      div.innerHTML = "<h3>Solution Steps:</h3>";
+
+      let i = 0;
+      function nextStep() {
+        if (i >= steps.length) return;
+        const p = document.createElement("p");
+        p.className = "step";
+        p.innerText = `${i + 1}. ${steps[i]}`;
+        div.appendChild(p);
+
+        jugA = states[i + 1].a;
+        jugB = states[i + 1].b;
+        updateVisuals();
+
+        i++;
+        setTimeout(nextStep, 1000);
+      }
+
+      jugA = states[0].a;
+      jugB = states[0].b;
+      updateVisuals();
+      setTimeout(nextStep, 1000);
+    }
+  </script>
+</body>
+</html>
